@@ -4,7 +4,9 @@ import agent from "../agents/code.agent.js";
 const agentRouter = Router();
 
 agentRouter.post("/invoke", async (req, res) => {
+
     try {
+
         const { message, projectId } = req.body;
 
         res.writeHead(200, {
@@ -15,27 +17,42 @@ agentRouter.post("/invoke", async (req, res) => {
 
         const response = await agent.stream(
             {
-                messages: [ {
-                    role: "user",
-                    content: message
-                } ]
+                messages: [
+                    {
+                        role: "user",
+                        content: message
+                    }
+                ]
             },
             {
                 context: {
                     projectId
                 },
                 streamMode: "custom"
-            });
+            }
+        );
 
         for await (const chunk of response) {
-            console.log(chunk)
+
+            console.log(chunk);
+
             res.write(`data: ${chunk}\n\n`);
         }
 
-        res.json({ response });
+        return res.end();
+
     } catch (error) {
+
         console.error("Error invoking agent:", error);
-        res.status(500).json({ error: "Failed to invoke agent" });
+
+        if (!res.headersSent) {
+
+            return res.status(500).json({
+                error: error.message || "Failed to invoke agent"
+            });
+        }
+
+        res.end();
     }
 });
 
